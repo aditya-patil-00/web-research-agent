@@ -1,6 +1,5 @@
 """
-tools.py - Core tools for the research agent
-Contains functions for query analysis, web search, content extraction, and synthesis
+tools.py - Core tools for the research agent updated to use open source models
 """
 
 import os
@@ -9,18 +8,35 @@ from typing import List, Dict, Any
 import requests
 from bs4 import BeautifulSoup
 import logging
-from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser, PydanticOutputParser
 from pydantic import BaseModel, Field
 from langchain_community.tools.tavily_search import TavilySearchResults
+from langchain_community.chat_models import ChatOpenAI
+import torch
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Initialize the model
-model = ChatOpenAI(model="gpt-4o")
+# Check for GPU
+device = "cuda" if torch.cuda.is_available() else "cpu"
+logger.info(f"Using device: {device}")
+
+# Initialize the model using OpenAI-compatible API
+try:
+    model = ChatOpenAI(
+        model="meta-llama/Meta-Llama-3-70B-Instruct",
+        temperature=0.1,
+        max_tokens=2048,
+        openai_api_key=os.getenv("DEEPINFRA_API_TOKEN"),
+        openai_api_base="https://api.deepinfra.com/v1/openai",
+    )
+    logger.info("Initialized Llama 3 70B model")
+except Exception as e:
+    logger.error(f"Failed to initialize Llama model: {e}")
+    logger.info("Please ensure you have set the DEEPINFRA_API_TOKEN environment variable")
+    raise e
 
 # Initialize search tool
 tavily_search = TavilySearchResults(max_results=5)
@@ -56,36 +72,108 @@ def analyze_query(query: str) -> Dict[str, Any]:
         2. For each sub-question, provide brief reasoning on why it's relevant
         3. Create an optimized search query for each sub-question that would yield good search results
         
-        Format your response as a JSON object with lists of sub-questions and search queries.
+        Output in this exact format with no other text:
+        SUB-QUESTIONS:
+        1. [First sub-question]
+        - Reasoning: [Why this sub-question is relevant]
+        - Search query: [Optimized search query]
+        
+        2. [Second sub-question]
+        - Reasoning: [Why this sub-question is relevant]
+        - Search query: [Optimized search query]
+        
+        [and so on...]
         """),
         ("human", "{query}")
     ])
     
-    class QueryAnalysisResponse(BaseModel):
-        sub_questions: List[Dict[str, str]] = Field(description="List of sub-questions with reasoning")
-        search_queries: List[str] = Field(description="List of optimized search queries")
-    
-    output_parser = PydanticOutputParser(pydantic_object=QueryAnalysisResponse)
-    
-    chain = analysis_prompt | model | output_parser
+    chain = analysis_prompt | model | StrOutputParser()
     
     try:
         result = chain.invoke({"query": query})
-        logger.info(f"Query analyzed successfully. Identified {len(result.sub_questions)} sub-questions")
+        logger.info("Query analyzed successfully")
+        
+        # Parse the structured text format
+        sub_questions = []
+        search_queries = []
+        
+        lines = result.strip().split('\n')
+        current_question = None
+        current_reasoning = None
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            # Check for numbered questions
+            if line[0].isdigit() and '. ' in line:
+                if current_question is not None and current_reasoning is not None:
+                    sub_questions.append({
+                        "question": current_question, 
+                        "reasoning": current_reasoning
+                    })
+                
+                current_question = line.split('. ', 1)[1].strip()
+                current_reasoning = None
+            
+            # Check for reasoning
+            elif '- Reasoning:' in line:
+                current_reasoning = line.split('- Reasoning:', 1)[1].strip()
+            
+            # Check for search query
+            elif '- Search query:' in line:
+                search_query = line.split('- Search query:', 1)[1].strip()
+                search_queries.append(search_query)
+        
+        # Add the last question
+        if current_question is not None and current_reasoning is not None:
+            sub_questions.append({
+                "question": current_question, 
+                "reasoning": current_reasoning
+            })
+        
+        # If parsing didn't go as expected, create a simple structure
+        if not sub_questions or len(sub_questions) != len(search_queries):
+            logger.warning("Parsing failed, using a simplified approach")
+            
+            # Extract questions using a simpler method - look for numbered items
+            sub_questions = []
+            search_queries = []
+            
+            for line in lines:
+                line = line.strip()
+                if line and line[0].isdigit() and '. ' in line:
+                    question = line.split('. ', 1)[1].strip()
+                    sub_questions.append({"question": question, "reasoning": ""})
+                    search_queries.append(question)
+            
+            # If still nothing, just split the query
+            if not sub_questions:
+                sub_questions = [{"question": query, "reasoning": ""}]
+                search_queries = [query]
+        
+        logger.info(f"Identified {len(sub_questions)} sub-questions")
         return {
-            "sub_questions": result.sub_questions,
-            "search_queries": result.search_queries
+            "sub_questions": sub_questions,
+            "search_queries": search_queries
         }
+        
     except Exception as e:
         logger.error(f"Error in query analysis: {e}")
-        # Fallback to simpler analysis if parsing fails
-        simple_prompt = ChatPromptTemplate.from_messages([
-            ("system", "Break down this research query into 3-5 key search queries."),
+        # Fallback to simpler analysis
+        fallback_prompt = ChatPromptTemplate.from_messages([
+            ("system", "Split this query into 3 search queries, one per line:"),
             ("human", "{query}")
         ])
-        simple_chain = simple_prompt | model | StrOutputParser()
-        result = simple_chain.invoke({"query": query})
-        search_queries = [line.strip().replace("- ", "") for line in result.split('\n') if line.strip()]
+        fallback_chain = fallback_prompt | model | StrOutputParser()
+        result = fallback_chain.invoke({"query": query})
+        search_queries = [line.strip() for line in result.split('\n') if line.strip()]
+        
+        # Ensure we have at least one query
+        if not search_queries:
+            search_queries = [query]
+            
         return {
             "sub_questions": [{"question": q, "reasoning": ""} for q in search_queries],
             "search_queries": search_queries
@@ -161,8 +249,8 @@ def extract_content(url: str) -> str:
         logger.info(f"Successfully extracted content: {len(text)} characters")
         
         # If text is too long, truncate it
-        if len(text) > 20000:
-            text = text[:20000] + "... [Content truncated due to length]"
+        if len(text) > 15000:
+            text = text[:15000] + "... [Content truncated due to length]"
             
         return text
     
@@ -184,15 +272,18 @@ def synthesize_information(main_query: str, search_results: List[Dict[str, Any]]
     """
     logger.info(f"Synthesizing information from {len(search_results)} search results")
     
-    # Prepare context from search results
+    # Prepare context from search results - limit to avoid context length issues
     context = ""
+    results_used = 0
+    
     for i, result in enumerate(search_results):
-        if 'content' in result and result['content']:
-            # Add a snippet of the content (first 500 chars)
-            content_snippet = result['content'][:500] + "..." if len(result['content']) > 500 else result['content']
+        if 'content' in result and result['content'] and results_used < 6:
+            # Add a snippet of the content (first 300 chars)
+            content_snippet = result['content'][:300] + "..." if len(result['content']) > 300 else result['content']
             context += f"\nSource {i+1}: {result.get('title', 'Untitled')}\n"
             context += f"URL: {result.get('url', 'No URL')}\n"
             context += f"Content snippet: {content_snippet}\n"
+            results_used += 1
     
     # Create list of sub-questions for context
     sub_questions_text = "\n".join([f"- {sq['question']}" for sq in sub_questions])
@@ -210,8 +301,7 @@ def synthesize_information(main_query: str, search_results: List[Dict[str, Any]]
         4. Be comprehensive but focused on the most relevant information
         5. Identify any gaps in the available information or areas that need further research
         
-        Write in clear, professional language. Use proper formatting for readability including paragraphs, bullets, 
-        and sections as appropriate.
+        Write in clear, professional language.
         """),
         ("human", """
         Main Research Query: {main_query}
