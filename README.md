@@ -42,33 +42,9 @@ A simple yet powerful web research agent that can analyze complex queries, searc
 ### Command Line Interface
 
 Run the agent from the command line:
-
-```bash
-python app.py --query "Your complex research question here"
-```
-
-#### Options:
-
-- `--query` or `-q`: The research query to process
-- `--output` or `-o`: Save results to a specified file
-- `--skip-cache`: Skip using cached results
-- `--max-sources`: Maximum number of sources to analyze (default: 10)
-
-Example:
-```bash
-python app.py --query "What are the environmental impacts of electric vehicles compared to gas vehicles?" --output results.json
-```
-
-### As a Library
-
-You can also use the agent programmatically:
-
-```python
-from app import research_workflow
-
-results = research_workflow("Your research query here")
-print(results["answer"])
-```
+   ```
+   streamlit run app.py
+   ```
 
 ## How It Works
 
