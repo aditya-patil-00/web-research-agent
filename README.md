@@ -15,14 +15,14 @@ A simple yet powerful web research agent that can analyze complex queries, searc
 ### Prerequisites
 
 - Python 3.8+
-- OpenAI API key
+- DEEPINFRA API key
 - Tavily API key
 
 ### Installation
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/ai-research-agent.git
+   git clone https://github.com/yourusername/web-research-agent.git
    cd ai-research-agent
    ```
 
@@ -33,7 +33,7 @@ A simple yet powerful web research agent that can analyze complex queries, searc
 
 3. Create a `.env` file with your API keys:
    ```
-   OPENAI_API_KEY=your_openai_key_here
+   DEEPINFRA_API_TOKEN=your_openai_key_here
    TAVILY_API_KEY=your_tavily_key_here
    ```
 
