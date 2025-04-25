@@ -53,6 +53,10 @@ Run the agent from the command line:
 3. **Content Extraction**: The agent extracts and processes content from the search results.
 4. **Information Synthesis**: All gathered information is synthesized into a comprehensive answer.
 
+## Workflow
+
+![](https://imgur.com/SDwR8b0)
+
 ## Project Structure
 
 - `app.py` - Main application file
