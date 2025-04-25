@@ -12,7 +12,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser, PydanticOutputParser
 from pydantic import BaseModel, Field
 from langchain_community.tools.tavily_search import TavilySearchResults
-from langchain_community.chat_models import ChatOpenAI
+from langchain_openai import ChatOpenAI
 import torch
 import streamlit as st
 
@@ -64,7 +64,19 @@ def analyze_query(query: str) -> Dict[str, Any]:
         
     Returns:
         Dictionary containing sub-questions and search queries
+        
+    Raises:
+        ValueError: If query is empty or invalid
+        TypeError: If query is None
     """
+    # Add input validation
+    if query is None:
+        raise TypeError("Query cannot be None")
+    if not isinstance(query, str):
+        raise TypeError("Query must be a string")
+    if not query.strip():
+        raise ValueError("Query cannot be empty")
+        
     logger.info(f"Analyzing query: {query}")
     
     analysis_prompt = ChatPromptTemplate.from_messages([
@@ -193,7 +205,18 @@ def web_search(query: str, num_results: int = 5) -> List[Dict[str, Any]]:
         
     Returns:
         List of search results with URLs and snippets
+    
+    Raises:
+        ValueError: If query is empty or invalid
+        TypeError: If query is None
     """
+    if query is None:
+        raise TypeError("Query cannot be None")
+    if not isinstance(query, str):
+        raise TypeError("Query must be a string")
+    if not query.strip():
+        raise ValueError("Query cannot be empty")
+    
     logger.info(f"Searching web for: {query}")
     
     try:

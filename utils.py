@@ -86,8 +86,10 @@ def clean_text(text: str, max_length: int = 8000) -> str:
     text = ' '.join(text.split())
     
     # Truncate if necessary
+    suffix = "... [Content truncated]"
     if len(text) > max_length:
-        text = text[:max_length] + "... [Content truncated]"
+        # Account for the length of the suffix
+        text = text[:max_length - len(suffix)] + suffix
     
     return text
 
