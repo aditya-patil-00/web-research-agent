@@ -55,7 +55,7 @@ Run the agent from the command line:
 
 ## Workflow
 
-![](https://imgur.com/SDwR8b0)
+!([](https://i.imgur.com/SDwR8b0.png))
 
 ## Project Structure
 
