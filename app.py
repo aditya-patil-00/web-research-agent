@@ -136,11 +136,11 @@ def main():
     st.info("This app uses Llama 3 70B Instruct, Meta's latest large language model, for analysis and synthesis.")
     
     # Check for required API key
-    if not os.getenv("TAVILY_API_KEY") or not os.getenv("DEEPINFRA_API_TOKEN"):
-        st.error("Missing required API keys. Please set the TAVILY_API_KEY and DEEPINFRA_API_TOKEN environment variables.")
+    if "TAVILY_API_KEY" not in st.secrets or "DEEPINFRA_API_TOKEN" not in st.secrets:
+        st.error("Missing required API keys. Please add TAVILY_API_KEY and DEEPINFRA_API_TOKEN to your Streamlit secrets.")
         st.info("You can get a free Tavily API key at https://tavily.com")
         st.info("You can get a DeepInfra API token at https://deepinfra.com")
-        return
+        st.stop()
     
     # Query input
     query = st.text_area("Enter your research question:", height=100)

@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain_community.chat_models import ChatOpenAI
 import torch
+import streamlit as st
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -29,7 +30,7 @@ try:
         model="meta-llama/Meta-Llama-3-70B-Instruct",
         temperature=0.1,
         max_tokens=2048,
-        openai_api_key=os.getenv("DEEPINFRA_API_TOKEN"),
+        openai_api_key=st.secrets["DEEPINFRA_API_TOKEN"],
         openai_api_base="https://api.deepinfra.com/v1/openai",
     )
     logger.info("Initialized Llama 3 70B model")
@@ -39,7 +40,10 @@ except Exception as e:
     raise e
 
 # Initialize search tool
-tavily_search = TavilySearchResults(max_results=5)
+tavily_search = TavilySearchResults(
+    api_key=st.secrets["TAVILY_API_KEY"],
+    max_results=5
+)
 
 class SubQuestion(BaseModel):
     """Model for a sub-question."""
