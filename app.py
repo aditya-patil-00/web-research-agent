@@ -135,7 +135,7 @@ def main():
     # Display model info
     st.info("This app uses Llama 3 70B Instruct, Meta's latest large language model, for analysis and synthesis.")
     
-    # Check for required API keys
+    # Check for required API key
     if not os.getenv("TAVILY_API_KEY") or not os.getenv("DEEPINFRA_API_TOKEN"):
         st.error("Missing required API keys. Please set the TAVILY_API_KEY and DEEPINFRA_API_TOKEN environment variables.")
         st.info("You can get a free Tavily API key at https://tavily.com")
@@ -165,7 +165,7 @@ def main():
         
         try:
             # Run research workflow
-            with st.spinner("Researching... This may take a minute with the open source model."):
+            with st.spinner("Researching... This may take a minute."):
                 results = research_workflow(query, progress_bar, status_text)
             
             # Display results
@@ -225,7 +225,7 @@ def main():
         - Include key terms and concepts
         - For complex topics, try to limit scope (e.g., "environmental impact of EVs in urban areas" instead of just "electric vehicles")
         - If you're not getting good results, try rephrasing your question
-        - The open-source model may be slower and less capable than commercial models, so be patient and keep queries focused
+        - Keep queries focused for better results
         """)
 
 if __name__ == "__main__":
