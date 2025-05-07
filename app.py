@@ -135,11 +135,17 @@ def main():
     # Display model info
     st.info("This app uses Llama 3 70B Instruct, Meta's latest large language model, for analysis and synthesis.")
     
-    # Check for required API key
+    # Check for required API keys
     if "TAVILY_API_KEY" not in st.secrets or "DEEPINFRA_API_TOKEN" not in st.secrets:
         st.error("Missing required API keys. Please add TAVILY_API_KEY and DEEPINFRA_API_TOKEN to your Streamlit secrets.")
         st.info("You can get a free Tavily API key at https://tavily.com")
         st.info("You can get a DeepInfra API token at https://deepinfra.com")
+        st.stop()
+    
+    # Validate API keys
+    tavily_key = st.secrets["TAVILY_API_KEY"]
+    if not tavily_key or len(tavily_key) < 10:
+        st.error("Invalid Tavily API key. Please check your configuration.")
         st.stop()
     
     # Query input
@@ -167,6 +173,22 @@ def main():
             # Run research workflow
             with st.spinner("Researching... This may take a minute."):
                 results = research_workflow(query, progress_bar, status_text)
+            
+            # Check if we got any results
+            if not results["sub_questions"] or not any(sq["sources"] for sq in results["sub_questions"]):
+                st.error("No search results found. This might be due to:")
+                st.markdown("""
+                - Invalid or expired API key
+                - Network connectivity issues
+                - Search query too specific or complex
+                - Rate limiting from the search API
+                
+                Please try:
+                1. Clearing the cache and searching again
+                2. Using a simpler or more general query
+                3. Checking your API key configuration
+                """)
+                return
             
             # Display results
             elapsed_time = time.time() - start_time

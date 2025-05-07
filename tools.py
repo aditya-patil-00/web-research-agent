@@ -225,7 +225,12 @@ def web_search(query: str, num_results: int = 5) -> List[Dict[str, Any]]:
     logger.info(f"Searching web for: {query}")
     
     try:
+        # Log the API key (first few characters only)
+        api_key = st.secrets["TAVILY_API_KEY"]
+        logger.info(f"Using Tavily API key: {api_key[:8]}...")
+        
         search_results = tavily_search.invoke(query)
+        logger.info(f"Raw search results: {json.dumps(search_results, indent=2)}")
         
         # Process and clean up results
         cleaned_results = []
@@ -238,10 +243,15 @@ def web_search(query: str, num_results: int = 5) -> List[Dict[str, Any]]:
             })
             
         logger.info(f"Found {len(cleaned_results)} search results")
+        if len(cleaned_results) == 0:
+            logger.warning("No search results found. This might indicate an API issue.")
+            
         return cleaned_results
     
     except Exception as e:
-        logger.error(f"Error in web search: {e}")
+        logger.error(f"Error in web search: {str(e)}")
+        logger.error(f"Error type: {type(e)}")
+        logger.error(f"Error details: {e.__dict__ if hasattr(e, '__dict__') else 'No details available'}")
         return []
 
 def extract_content(url: str) -> str:
