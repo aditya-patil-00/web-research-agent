@@ -42,7 +42,12 @@ except Exception as e:
 # Initialize search tool
 tavily_search = TavilySearchResults(
     api_key=st.secrets["TAVILY_API_KEY"],
-    max_results=5
+    max_results=5,
+    search_depth="advanced",  # Use advanced search for better results
+    include_domains=[],  # No domain restrictions
+    exclude_domains=[],
+    include_answer=True,
+    sort_by="date"  # Sort by date to get recent results
 )
 
 class SubQuestion(BaseModel):

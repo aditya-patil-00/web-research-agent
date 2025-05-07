@@ -75,7 +75,7 @@ def research_workflow(query, progress_bar=None, status_text=None):
         }
         
         # Search for this sub-question
-        search_cache_key = f"search_{generate_cache_key(search_q)}"
+        search_cache_key = f"search_{generate_cache_key(search_q)}_{int(time.time() / 3600)}"  # Cache expires every hour
         search_results = cache.get(search_cache_key)
         
         if search_results is None:

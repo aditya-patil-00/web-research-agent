@@ -1,0 +1,72 @@
+@startuml Research Agent Workflow
+
+skinparam backgroundColor white
+skinparam handwritten false
+skinparam defaultFontName Arial
+skinparam activity {
+  BackgroundColor LightBlue
+  BorderColor Blue
+  FontColor Black
+}
+
+start
+
+partition "Query Processing" {
+  :User submits research query;
+  :Check query cache;
+  if (Cache hit?) then (yes)
+    :Load cached analysis;
+  else (no)
+    :Analyze query;
+    :Generate sub-questions;
+    :Create search queries;
+    :Cache analysis;
+  endif
+}
+
+partition "Information Gathering" {
+  repeat
+    :Take next sub-question;
+    :Check search cache;
+    if (Cache hit?) then (yes)
+      :Load cached search results;
+    else (no)
+      :Execute web search;
+      :Cache search results;
+    endif
+    
+    repeat
+      :Process next search result;
+      :Check content cache;
+      if (Cache hit?) then (yes)
+        :Load cached content;
+      else (no)
+        :Extract webpage content;
+        if (Extraction successful?) then (yes)
+          :Clean and normalize content;
+          :Cache content;
+        else (no)
+          :Log extraction error;
+          :Skip source;
+        endif
+      endif
+    repeat while (More search results?) is (yes)
+  repeat while (More sub-questions?) is (yes)
+}
+
+partition "Synthesis" {
+  :Aggregate all sources;
+  :Cross-reference information;
+  :Identify key findings;
+  :Generate comprehensive answer;
+}
+
+partition "Response" {
+  :Format response;
+  :Add source citations;
+  :Display to user;
+}
+
+stop
+
+@enduml
